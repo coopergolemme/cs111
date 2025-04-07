@@ -18,25 +18,25 @@ run_test() {
     else
         echo "!!!! Test failed!!!!"
         echo "Input: $input"
-        echo "Expected: $expected_output"
-        echo "Got: $test_output"
+        echo -e "Expected:\n$expected_output"
+        echo -e "Got:\n$test_output"
     fi
 }
 
 # Define test cases
 test_cases=(
-    "exit"
-    "ls -l\nexit"
-    "ls -l\nwc lillethd-oregon.pem\nexit"
+    "grep -i hamlet /comp/111/assignments/shell/hamlet.txt | grep -i king | sort | wc -l"
+    # "ls -l\nexit"
+    # "ls -l\nwc lillethd-oregon.pem\nexit"
 )
 
 # Define expected outputs
 expected_outputs=(
-    "jsh$ "
-    "$(ls -l)
-jsh$ jsh status: 0
-jsh$ "
-    "$(ls -l)"$'\n'"jsh$ wc lillethd-oregon.pem"$'\n'"jsh status: 0"$'\n'"jsh$ "
+    "23\njsh$ jsh status: 0 \njsh$"
+#     "$(ls -l)
+# jsh$ jsh status: 0
+# jsh$ "
+#     "$(ls -l)"$'\n'"jsh$ wc lillethd-oregon.pem"$'\n'"jsh status: 0"$'\n'"jsh$ "
 
     # "jsh$ $(ls -l)\njsh status: 0\njsh$ "
     # "jsh$ $(wc lillethd-oregon.pem)\njsh status: 0\njsh$ "

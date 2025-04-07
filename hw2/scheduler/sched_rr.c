@@ -123,6 +123,7 @@ void sched_finished_time_slice(const struct process *proc)
   if (is_queue_empty())
   {
     // This is a check for if there is only one process left to run
+    //
     if (get_current_proc() == proc->pid)
     {
       return;

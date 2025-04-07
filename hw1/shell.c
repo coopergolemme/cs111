@@ -29,7 +29,8 @@ int main()
 
         if (fgets(input, sizeof(input), stdin) == NULL)
         {
-            break;
+            printf("fgets error: EOF reached\n");
+            return -1;
         }
 
         input[strcspn(input, "\n")] = 0;
@@ -120,17 +121,28 @@ int main()
             }
         }
 
+        // Close each of the file descriptors
         for (int j = 0; j < 2 * (num_commands - 1); j++)
         {
             close(pipefds[j]);
         }
 
+        int status;
+        int last_command_status = 0;
+
+        // Wait for each command child process
         for (int i = 0; i < num_commands; i++)
         {
-            int status;
             wait(&status);
-            fprintf(stdout, "jsh status: %d\n", WEXITSTATUS(status));
+            // If the last command fails, update the last command status, else assume we assume it returned with status 0
+            if (i == 0 && WEXITSTATUS(status) != 0)
+            {
+                last_command_status = WEXITSTATUS(status);
+            }
         }
+
+        // only print the status of the final command
+        fprintf(stdout, "jsh status: %d\n", last_command_status);
     }
 
     return 0;

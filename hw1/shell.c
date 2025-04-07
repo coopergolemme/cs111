@@ -67,11 +67,13 @@ int main()
             }
         }
 
+        pid_t last_pid = -1;
+
         // Fork a child process for each command.
         for (int i = 0; i < num_commands; i++)
         {
             int rc = fork();
-            if (rc < 0)
+            if (rc < 0) // fork failure
             {
                 perror("fork");
                 exit(1);
@@ -119,6 +121,11 @@ int main()
                 // status 127 indicates command not found
                 exit(127);
             }
+            else // parent process
+            {
+                if (i == num_commands - 1)
+                    last_pid = rc;
+            }
         }
 
         // Close each of the file descriptors
@@ -128,21 +135,21 @@ int main()
         }
 
         int status;
-        int last_command_status = 0;
+        int overall_status = 0; // Track the overall status of the pipeline
 
         // Wait for each command child process
         for (int i = 0; i < num_commands; i++)
         {
-            wait(&status);
-            // If the last command fails, update the last command status, else assume we assume it returned with status 0
-            if (i == 0 && WEXITSTATUS(status) != 0)
+            pid_t pid = wait(&status);
+
+            if (pid == last_pid)
             {
-                last_command_status = WEXITSTATUS(status);
+                overall_status = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
             }
         }
 
-        // only print the status of the final command
-        fprintf(stdout, "jsh status: %d\n", last_command_status);
+        // Print the overall status of the pipeline
+        fprintf(stdout, "jsh status: %d\n", overall_status);
     }
 
     return 0;

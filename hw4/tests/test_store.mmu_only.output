@@ -1,0 +1,25 @@
+STORE PID: 0, Virt Addr: 0x000f, Phys Addr: 0x000f, Data: 255
+STORE PID: 0, Virt Addr: 0x0016, Phys Addr: 0x0016, Data: 255
+STORE PID: 0, Virt Addr: 0x0038, Phys Addr: 0x0028, Data: 255
+STORE PID: 0, Virt Addr: 0x002e, Phys Addr: 0x003e, Data: 255
+STORE PID: 0, Virt Addr: 0x0043, Phys Addr: 0x0043, Data: 255
+STORE PID: 0, Virt Addr: 0x007c, Phys Addr: 0x005c, Data: 255
+STORE PID: 0, Virt Addr: 0x0060, Phys Addr: 0x0060, Data: 255
+STORE PID: 0, Virt Addr: 0x005a, Phys Addr: 0x007a, Data: 255
+STORE PID: 0, Virt Addr: 0x000f, Phys Addr: 0x000f, Data: 129
+STORE PID: 0, Virt Addr: 0x0016, Phys Addr: 0x0016, Data: 129
+STORE PID: 0, Virt Addr: 0x002e, Phys Addr: 0x003e, Data: 129
+STORE PID: 0, Virt Addr: 0x0038, Phys Addr: 0x0028, Data: 129
+STORE PID: 0, Virt Addr: 0x0043, Phys Addr: 0x0043, Data: 129
+STORE PID: 0, Virt Addr: 0x005a, Phys Addr: 0x007a, Data: 129
+STORE PID: 0, Virt Addr: 0x0060, Phys Addr: 0x0060, Data: 129
+STORE PID: 0, Virt Addr: 0x007c, Phys Addr: 0x005c, Data: 129
+STORE PID: 0, Virt Addr: 0x0000, Phys Addr: 0x0000, Data: 255
+STORE PID: 0, Virt Addr: 0x0071, Phys Addr: 0x0051, Data: 255
+STORE PID: 0, Virt Addr: 0x006c, Phys Addr: 0x006c, Data: 255
+STORE PID: 0, Virt Addr: 0x0018, Phys Addr: 0x0018, Data: 255
+STORE PID: 0, Virt Addr: 0x0025, Phys Addr: 0x0035, Data: 255
+STORE PID: 0, Virt Addr: 0x0037, Phys Addr: 0x0027, Data: 255
+STORE PID: 0, Virt Addr: 0x004f, Phys Addr: 0x004f, Data: 255
+STORE PID: 0, Virt Addr: 0x005c, Phys Addr: 0x007c, Data: 255
+Total Number of Page Faults: 0

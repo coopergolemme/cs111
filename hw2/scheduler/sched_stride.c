@@ -28,6 +28,57 @@ struct proc_list
 static struct proc_list *head = NULL;
 
 /**
+ * proc_list_empty
+ * Description: checks if the process list is empty or if all of the processes are terminated or blocked.
+ * Returns: bool - true if empty or all process are terminated or blocked, false otherwise
+ */
+bool proc_list_empty()
+{
+  if (head == NULL)
+  {
+    return true;
+  }
+  struct proc_list *current = head;
+
+  while (current != NULL)
+  {
+    if (current->proc->state != TERMINATED && current->proc->state != BLOCKED)
+    {
+      return false;
+    }
+    current = current->next;
+  }
+
+  return true;
+}
+
+/**
+ * is_only_one_ready
+ * Description: checks if there is only one process in the list that is in the READY state
+ * Returns: bool - true if there is exactly one READY process, false otherwise
+ */
+bool is_only_one_ready()
+{
+  struct proc_list *current = head;
+  int ready_count = 0;
+
+  while (current != NULL)
+  {
+    if (current->proc->state == READY)
+    {
+      ready_count++;
+      if (ready_count > 1)
+      {
+        return false;
+      }
+    }
+    current = current->next;
+  }
+
+  return ready_count == 1;
+}
+
+/**
  *  add_process
  *  Description: adds a process to the process list
  *  Parameters:
@@ -62,7 +113,7 @@ void add_process(struct process *proc, int stride, int pass)
  * increment_pass
  * Description: increments the pass value of the process with the given pid
  * Parameters: pid_t pid - the process id of the process to increment the pass
- *      `                  value of the process to increment the pass value of
+ *                        value of the process to increment the pass value of
  * Returns: void
  */
 void increment_pass(pid_t pid)
@@ -98,37 +149,6 @@ pid_t find_smallest_pass_pid()
     current = current->next;
   }
   return shortest ? shortest->proc->pid : -1;
-}
-
-/**
- * is_proc_list_empty
- * Description: checks if the process list is empty
- * Returns: bool_t - TRUE if the process list is empty, FALSE otherwise
- */
-bool is_proc_list_empty()
-{
-  return head == NULL;
-}
-
-/**
- * is_one_proc_left
- * Description: checks if there is only one process left in the process list
- *              that is not in the TERMINATED state.
- * Returns: bool_t - TRUE if there is only one process left, FALSE otherwise
- */
-bool is_one_proc_left()
-{
-  struct proc_list *current = head;
-  int count = 0;
-  while (current != NULL)
-  {
-    if (current->proc->state != TERMINATED)
-    {
-      count++;
-    }
-    current = current->next;
-  }
-  return count == 1 ? TRUE : FALSE;
 }
 
 /**
@@ -181,17 +201,15 @@ void sched_new_process(const struct process *proc)
 {
   assert(READY == proc->state);
   int stride = STRIDE_CONSTANT / proc->tickets;
-  if (is_proc_list_empty())
+
+  if (proc_list_empty())
   {
-    add_process((struct process *)proc, stride, stride);
+    add_process((struct process *)proc, stride, 0);
+    increment_pass(proc->pid);
     context_switch(proc->pid);
     return;
   }
   add_process((struct process *)proc, stride, 0);
-  if (is_one_proc_left())
-  {
-    run_new_process();
-  }
 }
 
 /* sched_finished_time_slice
@@ -207,16 +225,8 @@ void sched_new_process(const struct process *proc)
  */
 void sched_finished_time_slice(const struct process *proc)
 {
-  // printf("Finished time slice");
   assert(READY == proc->state);
-
-  pid_t next_proc = find_smallest_pass_pid();
-  pid_t curr_proc = get_current_proc();
-  if (curr_proc != next_proc)
-  {
-    increment_pass(next_proc);
-    context_switch(next_proc);
-  }
+  run_new_process();
 }
 
 /* sched_blocked
@@ -241,14 +251,9 @@ void sched_unblocked(const struct process *proc)
 {
   assert(READY == proc->state);
   // print_proc_list();
-  if (is_one_proc_left())
+  if (is_only_one_ready())
   {
-    increment_pass(proc->pid);
-    if (get_current_proc() == proc->pid)
-    {
-      return;
-    }
-    context_switch(proc->pid);
+    run_new_process();
   }
 }
 
@@ -281,17 +286,23 @@ void sched_cleanup()
   free_list();
 }
 
+/**
+ * run_new_process
+ * Description: finds a new process to run and runs it, incrementing the pass
+ *              of the process it runs.
+ */
 void run_new_process()
 {
   // find next proc to run
   pid_t next_proc = find_smallest_pass_pid();
-  // increment pass value of next proc
-  increment_pass(next_proc);
-  // context switch to next proc
   if (next_proc == -1)
   {
     return;
   }
+  increment_pass(next_proc);
+  // context switch to next proc
   if (get_current_proc() != next_proc)
+  {
     context_switch(next_proc);
+  }
 }

@@ -1,6 +1,7 @@
 #include "mmu.h"
 #include <math.h>
 #include <assert.h>
+#include <stdio.h>
 
 pte_t *ptbr = NULL; // Page Table Base Register
                     // points to the start of the current page table
@@ -52,22 +53,28 @@ offset_t get_offset(virt_addr_t addr)
  */
 phys_addr_t translate_addr(virt_addr_t virt_addr, bool_t write)
 {
-  // stop compiler from yelling
-  // TODO: encorperate this
-  (void)write;
 
   vpn_t vpn = get_vpn(virt_addr);
   offset_t offset = get_offset(virt_addr);
 
-  // Locate the page table entry using the vpn
   pte_t *pte = &ptbr[vpn];
 
-  // if page is in memory
+  // If the page is not present in memory, return PAGE_FAULT
   if (!pte->present)
   {
     return PAGE_FAULT;
   }
 
+  // Mark the page as accessed 
+  pte->reference = TRUE;
+
+  // If this is a write operation, mark the page as dirty
+  if (write)
+  {
+    pte->dirty = TRUE;
+  }
+
+  // Compute the physical address
   int offset_bits = log2(PAGE_SIZE);
   phys_addr_t phys_addr = (pte->pfn << offset_bits) | offset;
 

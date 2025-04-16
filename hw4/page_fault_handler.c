@@ -28,8 +28,12 @@ typedef struct
 
 pcb_t pcb[PID_MAX]; // we need a PCB for each proc
 
+pte_t *original_ptbr = NULL;
+static pfn_t clock_hand = 0;
+
 void init_frame_table();
 void init_page_table();
+pfn_t create_free_frame();
 
 /* init_vmm
  *   called exactly once when the simulation starts
@@ -37,16 +41,15 @@ void init_page_table();
  */
 void init_vmm(void)
 {
-  // This implementation provides a static pre-filled page table,
-  // with the first 8 pages (VPN 0 - 7) present and mapped to PFNs.
-  // This allows testing address translations alone (mmu.c),
-  // without having to implment anything in this file as well,
-  // but ultimately will need to be replaced by proper page fault handling.
+  // Allocate memory for the PTBR
+  original_ptbr = malloc(NUM_PAGES * sizeof(pte_t));
+  assert(NULL != original_ptbr); // Check for out-of-memory error
+  ptbr = original_ptbr;          // Set ptbr to the allocated memory
 
-  ptbr = malloc(NUM_PAGES * sizeof(pte_t));
-  assert(NULL != ptbr); // chech for Out of Memory error
+  // Initialize page tables
   init_page_table();
 
+  // Allocate and initialize the frame table
   frame_table = malloc(NUM_FRAMES * sizeof(frame_t));
   assert(NULL != frame_table);
   init_frame_table();
@@ -61,8 +64,6 @@ void init_frame_table()
     frame_table[pfn].vpn = 0;         // Default VPN (placeholder)
     frame_table[pfn].owner = -1;      // No owner (invalid PID)
   }
-
-  printf("Frame table initialized with %d frames.\n", NUM_FRAMES);
 }
 
 void init_page_table()
@@ -78,11 +79,9 @@ void init_page_table()
       pcb[pid].page_table[vpn].pfn = 0;
       pcb[pid].page_table[vpn].present = FALSE;
       pcb[pid].page_table[vpn].reference = FALSE;
-      pcb[pid].page_table[vpn].dirty = 0;
+      pcb[pid].page_table[vpn].dirty = FALSE;
     }
   }
-
-  printf("Page tables initialized for %d processes.\n", PID_MAX);
 }
 /* cleanup_vmm
  *   called exactly once just before the simulation finished
@@ -90,16 +89,29 @@ void init_page_table()
  */
 void cleanup_vmm(void)
 {
-  // Cleanup corresponding to the provied init implementation above,
-  // but this will also need to be replaced when the init is changed
-  // to its final verion.
-  free(ptbr);
+  // Free the page tables for each process
+  for (pid_t pid = 0; pid < PID_MAX; pid++)
+  {
+    free(pcb[pid].page_table);
+    pcb[pid].page_table = NULL;
+  }
+
+  // Free the frame table
+  if (frame_table != NULL)
+  {
+    free(frame_table);
+    frame_table = NULL;
+  }
+
+  // Free the original PTBR allocation
+  if (original_ptbr != NULL)
+  {
+    free(original_ptbr);
+    original_ptbr = NULL;
+  }
+
+  // Set ptbr to NULL to avoid dangling pointers
   ptbr = NULL;
-
-  free(frame_table);
-  frame_table = NULL;
-
-  // TODO: replace the above code with cleanup that you need to do
 }
 
 /* context_switch
@@ -136,8 +148,7 @@ pfn_t find_free_frame(void)
     }
   }
 
-  // If no free frame is found, return -1
-  return -1;
+  return (pfn_t)-1;
 }
 
 /* find_victim_page
@@ -152,8 +163,31 @@ pfn_t find_free_frame(void)
  */
 pfn_t find_victim_page(void)
 {
-  // TODO
   // Clock Sweep
+  while (TRUE)
+  {
+    // get the pfn considered by the clockhand
+    pfn_t curr_pfn = clock_hand;
+    // pointer to the frame at the current pfn
+    frame_t *frame = &frame_table[curr_pfn];
+
+    // get the vpn and check if the reference bit is set, if it is we clear it. If its not we found a good page to return
+    vpn_t vpn = frame->vpn;
+    pid_t frame_owner = frame->owner;
+    // pointer to the page table entry
+    pte_t *pte = &pcb[frame_owner].page_table[vpn];
+
+    // we found a good victim
+    if (!pte->reference)
+    {
+      return curr_pfn;
+    }
+    else
+    {
+      pte->reference = FALSE;
+    }
+    clock_hand = (clock_hand + 1) % NUM_FRAMES;
+  }
   return 0;
 }
 
@@ -178,19 +212,12 @@ pfn_t find_victim_page(void)
  */
 void page_fault_handler(pid_t faulting_proc, virt_addr_t faulting_addr)
 {
-  // printf("Page fault handler\n");
   pfn_t free_frame = find_free_frame();
-  // if (free_frame == -1)
-  // {
-  //   printf("No free frame found. Need to evict a page.\n");
-  //   free_frame = find_victim_page();
-  // }
-  // else
-  // {
-  //   // printf("Free frame found: PFN %d\n", free_frame);
-  // }
 
-  // need to handle no free frame found
+  if (free_frame == (pfn_t)-1)
+  {
+    free_frame = create_free_frame();
+  }
 
   // load faulting page into free frame
   vpn_t faulting_vpn = get_vpn(faulting_addr);
@@ -205,4 +232,30 @@ void page_fault_handler(pid_t faulting_proc, virt_addr_t faulting_addr)
   frame_table[free_frame].is_used = TRUE;
   frame_table[free_frame].vpn = faulting_vpn;
   frame_table[free_frame].owner = faulting_proc;
+}
+
+pfn_t create_free_frame()
+{
+  // Find a victim page to evict
+  pfn_t victim_pfn = find_victim_page();
+  vpn_t victim_vpn = frame_table[victim_pfn].vpn;
+  pid_t victim_owner = frame_table[victim_pfn].owner;
+
+  // Save if dirty
+  if (pcb[victim_owner].page_table[victim_vpn].dirty)
+  {
+    save_page_to_disk(victim_pfn, victim_owner, victim_vpn);
+    // Once we save dirty can be set to false
+    pcb[victim_owner].page_table[victim_vpn].dirty = FALSE;
+  }
+
+  // Update the victim's page table
+  pcb[victim_owner].page_table[victim_vpn].present = FALSE;
+
+  // Mark the frame as free
+  frame_table[victim_pfn].is_used = FALSE;
+  frame_table[victim_pfn].vpn = 0;
+  frame_table[victim_pfn].owner = -1;
+
+  return victim_pfn;
 }

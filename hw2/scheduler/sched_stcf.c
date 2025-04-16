@@ -1,13 +1,12 @@
 #include "scheduler.h"
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 /*******************************************************
  * SHORTEST TIME TO COMPLETION FIRST (STCF) Scheduler  *
  * (also known as Shortest Remaining Time First (SRTF) *
  *******************************************************/
-
-#include <stdlib.h>
-#include <stdio.h>
 
 /*
  * A pointer to the running process, initialized to NULL
@@ -45,7 +44,7 @@ void add_process(struct process *proc)
   if (new_node == NULL)
   {
     perror("Failed to allocate memory for new process node");
-    exit(EXIT_FAILURE);
+    // exit(EXIT_FAILURE);
   }
   new_node->proc = proc;
   new_node->next = head;
@@ -196,8 +195,6 @@ void sched_new_process(const struct process *proc)
 void sched_finished_time_slice(const struct process *proc)
 {
   assert(READY == proc->state);
-  // TODO: implement this
-  // printf("Finished time slice");
 }
 
 /* sched_blocked
@@ -227,19 +224,15 @@ void sched_blocked(const struct process *proc)
 void sched_unblocked(const struct process *proc)
 {
   assert(READY == proc->state);
-
-  pid_t curr_proc = get_current_proc();
-  // There is not a running process
-  if (curr_proc == -1)
+  if (get_current_proc() == -1)
   {
-    struct process *orp = run_new_process_return_old();
-    context_switch(orp->pid);
-    return;
+    run_new_process_return_old();
   }
-
-  // There is a running process
-  add_process(running_process);
-  run_new_process_return_old();
+  else
+  {
+    add_process(running_process);
+    run_new_process_return_old();
+  }
 }
 
 /* sched_terminated
@@ -255,11 +248,8 @@ void sched_unblocked(const struct process *proc)
 void sched_terminated(const struct process *proc)
 {
   assert(TERMINATED == proc->state);
-  // If the running process is not the one terminated
   if (!(running_process->pid == proc->pid))
-  {
     return;
-  }
   run_new_process_return_old();
 }
 
@@ -273,7 +263,6 @@ void sched_terminated(const struct process *proc)
  */
 void sched_cleanup()
 {
-  // TODO: implement this
 }
 
 /* run_new_process
@@ -283,14 +272,19 @@ void sched_cleanup()
 struct process *run_new_process_return_old()
 {
   struct process *stc_proc = remove_STC_process();
+
   // idle state
   if (stc_proc == NULL)
+  {
     return NULL;
+  }
   // if the process is the same as the running process, return the running process
-  if (stc_proc == running_process)
+  if (stc_proc->pid == get_current_proc())
+  {
     return running_process;
+  }
+  context_switch(stc_proc->pid);
   struct process *old_running_process = running_process;
   running_process = stc_proc;
-  context_switch(running_process->pid);
   return old_running_process;
 }

@@ -33,7 +33,6 @@ void enqueue_process(struct process *proc)
   if (new_node == NULL)
   {
     perror("Failed to allocate memory for new process queue node");
-    exit(EXIT_FAILURE);
   }
   new_node->proc = proc;
   new_node->next = NULL;
@@ -166,9 +165,12 @@ void sched_unblocked(const struct process *proc)
 {
   assert(READY == proc->state);
   // If queue is empty, context switch to the recently unblocked process.
-  if (is_queue_empty())
+  pid_t curr_proc = get_current_proc();
+  if (is_queue_empty() && curr_proc == -1)
   {
+
     context_switch(proc->pid);
+
     return;
   }
   // If queue is not empty, enqueue the recently unblocked process.

@@ -68,7 +68,7 @@ int threaded_slurp(char name, int idx)
     // semaphore.
     SemAndRelease *args = malloc(sizeof(SemAndRelease));
     args->sem = &hills[idx].sem;
-    args->release_time = start_time + 1.0;
+    args->release_time = start_time + 1.05;
 
     // Create thread with the releaser function, to release the semaphore 1
     // second from right now

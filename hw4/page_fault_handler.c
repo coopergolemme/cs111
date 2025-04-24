@@ -96,21 +96,18 @@ void cleanup_vmm(void)
     pcb[pid].page_table = NULL;
   }
 
-  // Free the frame table
   if (frame_table != NULL)
   {
     free(frame_table);
     frame_table = NULL;
   }
 
-  // Free the original PTBR allocation
   if (original_ptbr != NULL)
   {
     free(original_ptbr);
     original_ptbr = NULL;
   }
 
-  // Set ptbr to NULL to avoid dangling pointers
   ptbr = NULL;
 }
 
